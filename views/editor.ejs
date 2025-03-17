@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDF Editor - Edit Document</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+    />
+    <style>
+      .toolbar {
+        background-color: #f8f9fa;
+        padding: 10px;
+        border-bottom: 1px solid #dee2e6;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+      }
+
+      .toolbar-group {
+        display: inline-block;
+        margin-right: 15px;
+        border-right: 1px solid #dee2e6;
+        padding-right: 15px;
+      }
+
+      .toolbar-group:last-child {
+        border-right: none;
+      }
+
+      .toolbar button {
+        background: none;
+        border: 1px solid transparent;
+        padding: 5px 10px;
+        cursor: pointer;
+        border-radius: 3px;
+      }
+
+      .toolbar button:hover {
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+      }
+
+      .toolbar select {
+        padding: 5px;
+        margin-right: 5px;
+        border: 1px solid #dee2e6;
+        border-radius: 3px;
+      }
+
+      .toolbar .separator {
+        display: inline-block;
+        width: 1px;
+        height: 20px;
+        background-color: #dee2e6;
+        margin: 0 10px;
+        vertical-align: middle;
+      }
+
+      .menu-bar {
+        background-color: #f8f9fa;
+        padding: 5px 10px;
+        border-bottom: 1px solid #dee2e6;
+      }
+
+      .menu-bar button {
+        background: none;
+        border: none;
+        padding: 5px 10px;
+        cursor: pointer;
+      }
+
+      .menu-bar button:hover {
+        background-color: #e9ecef;
+      }
+
+      .upgrade-button {
+        float: right;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 5px 15px;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+
+      .upgrade-button:hover {
+        background-color: #0056b3;
+      }
+    </style>
+  </head>
+  <body class="editor-page">
+    <div class="container">
+      <header>
+        <div>
+        <h1>PDF Editor</h1>
+          <p>Edit your document and export when ready</p>
+        </div>
+        <div class="actions">
+          <a href="/" class="btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            Back
+          </a>
+          <button onclick="exportPDF()" class="btn-primary">
+            <i class="fas fa-download"></i>
+            Export PDF
+          </button>
+          <form id="imageUploadForm" style="display: inline;">
+            <input type="file" id="logoInput" name="logo" accept="image/*" style="display: none;" onchange="uploadImage(event)">
+            <button type="button" onclick="document.getElementById('logoInput').click()" class="btn-secondary">Upload Image</button>
+          </form>
+        </div>
+      </header>
+
+      <div class="menu-bar">
+        <button>File</button>
+        <button>Edit</button>
+        <button>View</button>
+        <button>Insert</button>
+        <button>Format</button>
+        <button>Tools</button>
+        <button>Table</button>
+        <button>Help</button>
+        <button class="upgrade-button">⚡ Upgrade</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <button onclick="document.execCommand('undo')"><i class="fas fa-undo"></i></button>
+          <button onclick="document.execCommand('redo')"><i class="fas fa-redo"></i></button>
+        </div>
+
+        <div class="toolbar-group">
+          <select id="font-family" onchange="document.execCommand('fontName', false, this.value)">
+            <option value="Arial">Arial</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Courier New">Courier New</option>
+          </select>
+          <select id="font-size" onchange="setFontSize(this.value)">
+            <option value="1">8</option>
+            <option value="2">10</option>
+            <option value="3">12</option>
+            <option value="4">14</option>
+            <option value="5">16</option>
+            <option value="6">18</option>
+            <option value="7">20</option>
+          </select>
+        </div>
+
+        <div class="toolbar-group">
+          <button onclick="document.execCommand('bold')"><i class="fas fa-bold"></i></button>
+          <button onclick="document.execCommand('italic')"><i class="fas fa-italic"></i></button>
+          <button onclick="document.execCommand('underline')"><i class="fas fa-underline"></i></button>
+        </div>
+
+        <div class="toolbar-group">
+          <button onclick="document.execCommand('justifyLeft')"><i class="fas fa-align-left"></i></button>
+          <button onclick="document.execCommand('justifyCenter')"><i class="fas fa-align-center"></i></button>
+          <button onclick="document.execCommand('justifyRight')"><i class="fas fa-align-right"></i></button>
+          <button onclick="document.execCommand('justifyFull')"><i class="fas fa-align-justify"></i></button>
+        </div>
+
+        <div class="toolbar-group">
+          <button onclick="document.execCommand('insertOrderedList')"><i class="fas fa-list-ol"></i></button>
+          <button onclick="document.execCommand('insertUnorderedList')"><i class="fas fa-list-ul"></i></button>
+          <button onclick="document.execCommand('indent')"><i class="fas fa-indent"></i></button>
+          <button onclick="document.execCommand('outdent')"><i class="fas fa-outdent"></i></button>
+        </div>
+
+        <div class="toolbar-group">
+          <button id="uploadImageBtn"><i class="fas fa-image"></i></button>
+          <input type="file" id="imageInput" accept="image/*" style="display: none;">
+        </div>
+      </div>
+
+        <div class="editor-container">
+        <div class="pdf-content" id="pdfContent">
+          <%- pdfContent %>
+        </div>
+      </div>
+
+      <div class="zoom-controls">
+        <button class="zoom-btn" onclick="zoom(0.1)">
+          <i class="fas fa-plus"></i>
+        </button>
+        <button class="zoom-btn" onclick="zoom(-0.1)">
+          <i class="fas fa-minus"></i>
+        </button>
+      </div>
+
+      <div class="action-buttons">
+        <button onclick="exportPDF()">Export PDF</button>
+      </div>
+    </div>
+
+    <script>
+      let currentScale = 1;
+
+      function zoom(delta) {
+        currentScale = Math.max(0.5, Math.min(2, currentScale + delta));
+        document.querySelector('.pdf-content').style.transform = `scale(${currentScale})`;
+      }
+
+      function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('image', file);
+
+        fetch('/upload-image', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.imageUrl) {
+            const img = document.createElement('img');
+            img.src = data.imageUrl;
+            img.className = 'editable-image';
+            img.style.maxWidth = '200px';
+            img.style.cursor = 'move';
+            img.draggable = true;
+            
+            // Make image resizable
+            img.style.resize = 'both';
+            img.style.overflow = 'auto';
+            
+            // Add image to the content
+            const content = document.getElementById('pdfContent');
+            content.insertBefore(img, content.firstChild);
+            
+            // Make image draggable
+            makeImageDraggable(img);
+          }
+        })
+        .catch(error => {
+          console.error('Error uploading image:', error);
+          alert('Failed to upload image. Please try again.');
+        });
+      }
+
+      function makeImageDraggable(img) {
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+
+        img.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', dragEnd);
+
+        function dragStart(e) {
+          initialX = e.clientX - xOffset;
+          initialY = e.clientY - yOffset;
+
+          if (e.target === img) {
+            isDragging = true;
+          }
+        }
+
+        function drag(e) {
+          if (isDragging) {
+            e.preventDefault();
+            currentX = e.clientX - initialX;
+            currentY = e.clientY - initialY;
+
+            xOffset = currentX;
+            yOffset = currentY;
+
+            setTranslate(currentX, currentY, img);
+          }
+        }
+
+        function setTranslate(xPos, yPos, el) {
+          el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0)`;
+        }
+
+        function dragEnd(e) {
+          initialX = currentX;
+          initialY = currentY;
+          isDragging = false;
+        }
+      }
+
+      // Make existing images draggable
+      document.querySelectorAll('.editable-image').forEach(makeImageDraggable);
+
+      function exportPDF() {
+        const content = document.getElementById('pdfContent').innerHTML;
+        
+        // Collect all form data
+        const formData = {
+          formDate: document.querySelector('input#formDate')?.value,
+          studentName: document.querySelector('input#studentName')?.value,
+          usn: document.querySelector('input#usn')?.value,
+          degree: document.querySelector('input#degree')?.value,
+          department: document.querySelector('input#department')?.value,
+          semester: document.querySelector('input#semester')?.value,
+          courseTitle: document.querySelector('input#courseTitle')?.value,
+          courseCode: document.querySelector('input#courseCode')?.value,
+          courseDept: document.querySelector('input#courseDept')?.value,
+          courseTerm: document.querySelector('input#courseTerm')?.value,
+          credits: document.querySelector('input#credits')?.value,
+          totalCredits: document.querySelector('#totalCredits')?.textContent
+        };
+        
+        console.log('Sending form data:', formData);
+        
+        // Show loading indicator
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.id = 'loading-indicator';
+        loadingIndicator.style.position = 'fixed';
+        loadingIndicator.style.top = '50%';
+        loadingIndicator.style.left = '50%';
+        loadingIndicator.style.transform = 'translate(-50%, -50%)';
+        loadingIndicator.style.padding = '20px';
+        loadingIndicator.style.background = 'rgba(0,0,0,0.7)';
+        loadingIndicator.style.color = 'white';
+        loadingIndicator.style.borderRadius = '5px';
+        loadingIndicator.style.zIndex = '9999';
+        loadingIndicator.textContent = 'Generating PDF...';
+        document.body.appendChild(loadingIndicator);
+        
+        fetch('/export', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ content, formData })
+        })
+        .then(response => {
+          // Remove loading indicator
+          document.body.removeChild(loadingIndicator);
+          
+          if (!response.ok) {
+            if (response.headers.get('Content-Type')?.includes('application/json')) {
+              return response.json().then(data => {
+                throw new Error(data.error || 'Export failed');
+              });
+            }
+            throw new Error(`Export failed with status: ${response.status}`);
+          }
+          
+          // For PDF response, create a download link
+          const contentDisposition = response.headers.get('Content-Disposition');
+          let filename = 'course-registration.pdf';
+          if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+            if (filenameMatch && filenameMatch[1]) {
+              filename = filenameMatch[1];
+            }
+          }
+          
+          return response.blob().then(blob => {
+            console.log('Received blob:', blob);
+            
+            // Create a URL for the blob
+            const url = URL.createObjectURL(blob);
+            
+            // Create a link to download the PDF
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Clean up
+            setTimeout(() => {
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }, 100);
+          });
+        })
+        .catch(error => {
+          // Remove loading indicator if still present
+          const indicator = document.getElementById('loading-indicator');
+          if (indicator) document.body.removeChild(indicator);
+          
+          console.error('Error exporting PDF:', error);
+          alert('Failed to export PDF. Please try again. Error: ' + error.message);
+        });
+      }
+
+      // Font size function
+      function setFontSize(size) {
+        document.execCommand('fontSize', false, size);
+      }
+
+      // Image upload handling
+      document.getElementById('uploadImageBtn').addEventListener('click', function() {
+        document.getElementById('imageInput').click();
+      });
+
+      document.getElementById('imageInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          const formData = new FormData();
+          formData.append('image', file);
+
+          fetch('/upload-image', {
+            method: 'POST',
+            body: formData
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.imageUrl) {
+              const img = document.createElement('img');
+              img.src = data.imageUrl;
+              img.style.maxWidth = '300px';
+              img.className = 'editable-image';
+              
+              // Make image draggable
+              img.draggable = true;
+              img.addEventListener('dragstart', handleDragStart);
+              img.addEventListener('dragend', handleDragEnd);
+              
+              // Insert at cursor position or append to content
+              const selection = window.getSelection();
+              if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                range.insertNode(img);
+            } else {
+                document.querySelector('.pdf-content').appendChild(img);
+              }
+            }
+          })
+          .catch(error => console.error('Error uploading image:', error));
+        }
+      });
+
+      // Drag and drop functionality for images
+      let draggedImage = null;
+      let startX, startY;
+
+      function handleDragStart(e) {
+        draggedImage = e.target;
+        startX = e.clientX - draggedImage.offsetLeft;
+        startY = e.clientY - draggedImage.offsetTop;
+      }
+
+      function handleDragEnd(e) {
+        if (draggedImage) {
+          const x = e.clientX - startX;
+          const y = e.clientY - startY;
+          draggedImage.style.position = 'absolute';
+          draggedImage.style.left = x + 'px';
+          draggedImage.style.top = y + 'px';
+          draggedImage = null;
+        }
+      }
+
+      // Update total credits when credits field changes
+      document.getElementById('credits').addEventListener('input', function() {
+        document.getElementById('totalCredits').textContent = this.value;
+      });
+
+      // Add hover effect to editable fields
+      const inputs = document.querySelectorAll('input');
+      inputs.forEach(input => {
+        input.addEventListener('mouseover', function() {
+          this.style.backgroundColor = '#f0f0f0';
+        });
+        input.addEventListener('mouseout', function() {
+          this.style.backgroundColor = 'none';
+        });
+      });
+
+      async function uploadImage(event) {
+        try {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          const formData = new FormData();
+          formData.append('logo', file);
+
+          const response = await fetch('/upload-image', {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to upload image');
+          }
+
+          const result = await response.json();
+          if (result.success) {
+            alert('Image uploaded successfully!');
+            // Refresh the page or update the logo display
+            location.reload();
+          }
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          alert('Failed to upload image: ' + error.message);
+        }
+      }
+    </script>
+  </body>
+</html>
