@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -176,7 +177,7 @@
       </div>
 
         <div class="editor-container">
-        <div class="pdf-content" id="pdfContent">
+        <div class="pdf-content" id="pdfContent" contenteditable="true">
           <%- pdfContent %>
         </div>
       </div>
@@ -288,106 +289,35 @@
         }
       }
 
-      // Make existing images draggable
+ 
       document.querySelectorAll('.editable-image').forEach(makeImageDraggable);
-
       function exportPDF() {
         const content = document.getElementById('pdfContent').innerHTML;
-        
-        // Collect all form data
-        const formData = {
-          formDate: document.querySelector('input#formDate')?.value,
-          studentName: document.querySelector('input#studentName')?.value,
-          usn: document.querySelector('input#usn')?.value,
-          degree: document.querySelector('input#degree')?.value,
-          department: document.querySelector('input#department')?.value,
-          semester: document.querySelector('input#semester')?.value,
-          courseTitle: document.querySelector('input#courseTitle')?.value,
-          courseCode: document.querySelector('input#courseCode')?.value,
-          courseDept: document.querySelector('input#courseDept')?.value,
-          courseTerm: document.querySelector('input#courseTerm')?.value,
-          credits: document.querySelector('input#credits')?.value,
-          totalCredits: document.querySelector('#totalCredits')?.textContent
-        };
-        
-        console.log('Sending form data:', formData);
-        
-        // Show loading indicator
-        const loadingIndicator = document.createElement('div');
-        loadingIndicator.id = 'loading-indicator';
-        loadingIndicator.style.position = 'fixed';
-        loadingIndicator.style.top = '50%';
-        loadingIndicator.style.left = '50%';
-        loadingIndicator.style.transform = 'translate(-50%, -50%)';
-        loadingIndicator.style.padding = '20px';
-        loadingIndicator.style.background = 'rgba(0,0,0,0.7)';
-        loadingIndicator.style.color = 'white';
-        loadingIndicator.style.borderRadius = '5px';
-        loadingIndicator.style.zIndex = '9999';
-        loadingIndicator.textContent = 'Generating PDF...';
-        document.body.appendChild(loadingIndicator);
-        
+      
         fetch('/export', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ content, formData })
+          body: JSON.stringify({ content }),
         })
-        .then(response => {
-          // Remove loading indicator
-          document.body.removeChild(loadingIndicator);
-          
-          if (!response.ok) {
-            if (response.headers.get('Content-Type')?.includes('application/json')) {
-              return response.json().then(data => {
-                throw new Error(data.error || 'Export failed');
-              });
-            }
-            throw new Error(`Export failed with status: ${response.status}`);
-          }
-          
-          // For PDF response, create a download link
-          const contentDisposition = response.headers.get('Content-Disposition');
-          let filename = 'course-registration.pdf';
-          if (contentDisposition) {
-            const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
-            if (filenameMatch && filenameMatch[1]) {
-              filename = filenameMatch[1];
-            }
-          }
-          
-          return response.blob().then(blob => {
-            console.log('Received blob:', blob);
-            
-            // Create a URL for the blob
+          .then((response) => response.blob())
+          .then((blob) => {
             const url = URL.createObjectURL(blob);
-            
-            // Create a link to download the PDF
             const a = document.createElement('a');
             a.href = url;
-            a.download = filename;
+            a.download = 'edited-document.pdf';
             document.body.appendChild(a);
             a.click();
-            
-            // Clean up
-            setTimeout(() => {
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-            }, 100);
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          })
+          .catch((error) => {
+            console.error('Error exporting PDF:', error);
+            alert('Failed to export PDF. Please try again.');
           });
-        })
-        .catch(error => {
-          // Remove loading indicator if still present
-          const indicator = document.getElementById('loading-indicator');
-          if (indicator) document.body.removeChild(indicator);
-          
-          console.error('Error exporting PDF:', error);
-          alert('Failed to export PDF. Please try again. Error: ' + error.message);
-        });
       }
 
-      // Font size function
       function setFontSize(size) {
         document.execCommand('fontSize', false, size);
       }
