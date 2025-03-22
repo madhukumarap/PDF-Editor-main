@@ -9,12 +9,24 @@ const puppeteer = require('puppeteer');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Ensure directories exist and have write permissions
+const uploadsDir = path.join(__dirname, "uploads");
+const imagesDir = path.join(__dirname, "public", "images");
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true, mode: 0o755 });
+}
+
+if (!fs.existsSync(imagesDir)) {
+  fs.mkdirSync(imagesDir, { recursive: true, mode: 0o755 });
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (file.fieldname === "pdfFile") {
-      cb(null, "uploads/");
+      cb(null, uploadsDir);
     } else if (file.fieldname === "logo") {
-      cb(null, "public/images/");
+      cb(null, imagesDir);
     }
   },
   filename: (req, file, cb) => {
@@ -34,7 +46,6 @@ const upload = multer({
     }
   },
 });
-
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 app.use(express.json({ limit: "50mb" }));
@@ -46,33 +57,49 @@ app.get("/", (req, res) => {
 });
 
 // Upload PDF and convert to HTML
+
+
+const { spawn } = require("child_process");
+const { exec } = require("child_process");
 app.post("/upload", upload.single("pdfFile"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).send("No file uploaded");
+  if (!req.file) {
+    return res.status(400).send("No file uploaded");
+  }
+
+  const inputPath = path.join("uploads", req.file.filename);
+  const outputFile = `${req.file.filename}.html`; // Simplified to .html
+  const absoluteInputPath = path.join(__dirname, inputPath);
+  const absoluteOutputPath = path.join(__dirname, "uploads", outputFile);
+
+  // Command to generate standalone HTML without manifest dependency
+  const command = `pdf2htmlEX --zoom 1.3 --embed "" --split-pages 0 --dest-dir "${uploadsDir}" "${absoluteInputPath}" "${outputFile}"`;
+
+  console.log("Command:", command);
+  console.log("Input Path (absolute):", absoluteInputPath);
+  console.log("Output Path (absolute):", absoluteOutputPath);
+  console.log("Working Directory:", __dirname);
+
+  exec(command, { cwd: __dirname }, (error, stdout, stderr) => {
+    console.log("stdout:", stdout);
+    if (stderr) {
+      console.log("stderr (ignored if HTML exists):", stderr);
     }
 
-    const filePath = req.file.path;
-
-    // Read the PDF file and extract text
-    const pdfBuffer = fs.readFileSync(filePath);
-    const pdfData = await pdfParse(pdfBuffer);
-
-    // Convert extracted text into simple HTML format
-    const pdfContent = pdfData.text.replace(/\n/g, "<br>");
-
-    // Render the editor page with the extracted content
-    res.render("editor", {
-      pdfContent: pdfContent,
-      originalFile: req.file.filename,
-    });
-
-  } catch (error) {
-    console.error("Error processing PDF:", error);
-    res.status(500).send("Error processing PDF file");
-  }
+    // Always check for HTML output, ignoring manifest error
+    if (fs.existsSync(absoluteOutputPath)) {
+      console.log("HTML file generated successfully.");
+      const htmlContent = fs.readFileSync(absoluteOutputPath, "utf8");
+      res.render("editor", {
+        pdfContent: htmlContent,
+        originalFile: req.file.filename,
+      });
+    } else {
+      console.error("Error: Output file was not created at", absoluteOutputPath);
+      if (error) console.error("Exec error:", error.message);
+      res.status(500).send("Error generating HTML from PDF");
+    }
+  });
 });
-
 
 
 app.post("/export", async (req, res) => {
